@@ -1,7 +1,16 @@
-import { ArrowRight, Shield, Fingerprint, ScanLine } from "lucide-react";
+import { motion } from "framer-motion";
+import { ArrowRight, Shield, Fingerprint, ScanLine, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function HeroSection() {
+  const scrollToDemo = () => {
+    document.getElementById("demo")?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const scrollToVerify = () => {
+    document.getElementById("verify")?.scrollIntoView({ behavior: "smooth" });
+  };
+
   return (
     <section id="home" className="relative min-h-screen pt-16 overflow-hidden">
       {/* Background Effects */}
@@ -13,36 +22,61 @@ export function HeroSection() {
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Left Content */}
           <div className="space-y-8">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium animate-fade-in">
+            <motion.div 
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
               <Shield className="h-4 w-4" />
               <span>Advanced AI-Powered Security</span>
-            </div>
+            </motion.div>
 
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight animate-fade-in" style={{ animationDelay: "0.1s" }}>
+            <motion.h1 
+              className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
               <span className="text-foreground">Forgery-Resilient</span>
               <br />
               <span className="text-gradient">Signature</span>
               <br />
               <span className="text-foreground">Authentication</span>
-            </h1>
+            </motion.h1>
 
-            <p className="text-lg text-muted-foreground max-w-lg animate-fade-in" style={{ animationDelay: "0.2s" }}>
+            <motion.p 
+              className="text-lg text-muted-foreground max-w-lg"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
               Advanced AI system combining Siamese Metric Learning with Digital Tamper Detection 
               to authenticate signatures and defend against sophisticated forgery attacks.
-            </p>
+            </motion.p>
 
-            <div className="flex flex-col sm:flex-row gap-4 animate-fade-in" style={{ animationDelay: "0.3s" }}>
-              <Button variant="hero" size="xl" className="group">
+            <motion.div 
+              className="flex flex-col sm:flex-row gap-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <Button variant="hero" size="xl" className="group" onClick={scrollToVerify}>
                 Start Verification
                 <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
               </Button>
-              <Button variant="glow" size="xl">
-                Learn More
+              <Button variant="glow" size="xl" onClick={scrollToDemo}>
+                <Play className="h-5 w-5" />
+                Try Demo
               </Button>
-            </div>
+            </motion.div>
 
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-6 pt-8 border-t border-border animate-fade-in" style={{ animationDelay: "0.4s" }}>
+            <motion.div 
+              className="grid grid-cols-3 gap-6 pt-8 border-t border-border"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
               <div>
                 <div className="text-2xl md:text-3xl font-bold text-gradient">99.7%</div>
                 <div className="text-sm text-muted-foreground">Accuracy Rate</div>
@@ -55,11 +89,16 @@ export function HeroSection() {
                 <div className="text-2xl md:text-3xl font-bold text-gradient">2-Layer</div>
                 <div className="text-sm text-muted-foreground">Defense System</div>
               </div>
-            </div>
+            </motion.div>
           </div>
 
           {/* Right Content - Visual */}
-          <div className="relative lg:h-[600px] animate-fade-in" style={{ animationDelay: "0.2s" }}>
+          <motion.div 
+            className="relative lg:h-[600px]"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+          >
             <div className="relative h-full flex items-center justify-center">
               {/* Main Card */}
               <div className="relative glass-card p-8 w-full max-w-md animate-float">
@@ -114,14 +153,22 @@ export function HeroSection() {
               </div>
 
               {/* Floating Elements */}
-              <div className="absolute -top-4 -right-4 p-3 glass-card animate-float" style={{ animationDelay: "0.5s" }}>
+              <motion.div 
+                className="absolute -top-4 -right-4 p-3 glass-card"
+                animate={{ y: [0, -10, 0] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              >
                 <Shield className="h-6 w-6 text-primary" />
-              </div>
-              <div className="absolute -bottom-4 -left-4 p-3 glass-card animate-float" style={{ animationDelay: "1s" }}>
+              </motion.div>
+              <motion.div 
+                className="absolute -bottom-4 -left-4 p-3 glass-card"
+                animate={{ y: [0, 10, 0] }}
+                transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+              >
                 <Fingerprint className="h-6 w-6 text-cyan-400" />
-              </div>
+              </motion.div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
     </section>
