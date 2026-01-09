@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, CheckCircle2, XCircle, AlertTriangle, RotateCcw } from "lucide-react";
+import { Play, CheckCircle2, XCircle, AlertTriangle, RotateCcw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useSignatureVerification, type DemoSignature } from "@/hooks/useSignatureVerification";
@@ -17,23 +17,20 @@ const demoSignatures: DemoSignature[] = [
     type: "genuine",
     image: testGenuineSvg,
     description: "Authentic signature from the same person",
-    dataset: "SVC2004",
   },
   {
     id: "forged",
     name: "Skilled Forgery",
     type: "forged",
     image: testForgedSvg,
-    description: "Carefully imitated by another person",
-    dataset: "SCUT-MMSIG",
+    description: "Carefully imitated signature by another person",
   },
   {
     id: "tampered",
     name: "Digital Tampering",
     type: "tampered",
     image: testTamperedSvg,
-    description: "Copy-pasted with digital manipulation",
-    dataset: "Custom Tamper",
+    description: "Copy-pasted signature with digital manipulation",
   },
 ];
 
@@ -68,63 +65,67 @@ export function DemoSection() {
   };
 
   return (
-    <section id="demo" className="relative py-24">
+    <section id="demo" className="relative py-24 overflow-hidden bg-card/30">
+      <div className="absolute inset-0 grid-pattern opacity-10" />
+      <div className="absolute top-1/2 right-0 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+      
       <div className="container relative mx-auto px-4">
-        {/* Header */}
-        <div className="max-w-2xl mb-12">
-          <motion.p
-            className="text-sm font-medium text-primary mb-3"
-            initial={{ opacity: 0, y: 12 }}
+        <div className="text-center max-w-3xl mx-auto mb-12">
+          <motion.div 
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-6"
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            Interactive Demo
-          </motion.p>
+            <Sparkles className="h-4 w-4" />
+            <span>Interactive Demo</span>
+          </motion.div>
           
           <motion.h2 
-            className="font-serif text-3xl md:text-4xl font-semibold mb-4"
-            initial={{ opacity: 0, y: 12 }}
+            className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6"
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.1 }}
           >
-            Try the Demo
+            <span className="text-foreground">Try the</span>{" "}
+            <span className="text-gradient">Demo</span>
           </motion.h2>
           
           <motion.p 
-            className="text-muted-foreground"
-            initial={{ opacity: 0, y: 12 }}
+            className="text-lg text-muted-foreground"
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ delay: 0.15 }}
+            transition={{ delay: 0.2 }}
           >
-            Experience how our AI detects genuine signatures, skilled forgeries, 
+            Experience how our AI system detects genuine signatures, skilled forgeries, 
             and digital tampering in real-time.
           </motion.p>
         </div>
 
-        <div className="max-w-5xl">
+        <div className="max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-8">
             {/* Left: Reference + Demo Selection */}
             <motion.div 
               className="space-y-6"
-              initial={{ opacity: 0, x: -16 }}
+              initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
             >
               {/* Reference Signature */}
-              <div className="paper-card p-6">
-                <div className="text-sm font-medium text-muted-foreground mb-3">Reference Signature</div>
-                <div className="aspect-[3/2] rounded-md bg-secondary/50 border border-success/30 flex items-center justify-center overflow-hidden">
+              <div className="glass-card p-6">
+                <h3 className="text-sm font-medium text-muted-foreground mb-3">Reference Signature (Known Genuine)</h3>
+                <div className="aspect-[3/2] rounded-lg bg-secondary/50 border border-success/30 flex items-center justify-center overflow-hidden">
                   <img src={referenceGenuineSvg} alt="Reference signature" className="w-3/4 opacity-90" />
                 </div>
-                <p className="text-xs text-muted-foreground mt-3">Known genuine signature for comparison</p>
+                <p className="text-xs text-muted-foreground mt-3">This is the authentic signature used for comparison</p>
               </div>
 
               {/* Demo Selection */}
-              <div className="paper-card p-6">
-                <div className="text-sm font-medium text-muted-foreground mb-4">Select Test Case</div>
-                <div className="space-y-3">
+              <div className="glass-card p-6">
+                <h3 className="text-sm font-medium text-muted-foreground mb-4">Select Test Case</h3>
+                <div className="grid gap-3">
                   {demoSignatures.map((demo) => (
                     <button
                       key={demo.id}
@@ -134,23 +135,24 @@ export function DemoSection() {
                       }}
                       disabled={status !== "idle" && status !== "complete"}
                       className={cn(
-                        "w-full flex items-center gap-4 p-4 rounded-md border text-left transition-all",
+                        "flex items-center gap-4 p-4 rounded-xl border text-left transition-all duration-200",
                         selectedDemo?.id === demo.id
-                          ? "bg-primary/5 border-primary/40"
-                          : "bg-secondary/30 border-border hover:border-primary/30",
+                          ? "bg-primary/10 border-primary/50"
+                          : "bg-secondary/30 border-border hover:border-primary/30 hover:bg-secondary/50",
                         status !== "idle" && status !== "complete" && "opacity-50 cursor-not-allowed"
                       )}
                     >
-                      <div className="w-20 h-14 rounded bg-secondary/50 border border-border flex items-center justify-center overflow-hidden shrink-0">
+                      <div className="w-24 h-16 rounded-lg bg-secondary/50 border border-border flex items-center justify-center overflow-hidden shrink-0">
                         <img src={demo.image} alt={demo.name} className="w-full opacity-80" />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-foreground text-sm">{demo.name}</div>
-                        <div className="text-xs text-muted-foreground">{demo.description}</div>
-                        <div className="text-xs text-primary mt-1">Dataset: {demo.dataset}</div>
+                      <div>
+                        <div className="font-medium text-foreground">{demo.name}</div>
+                        <div className="text-sm text-muted-foreground">{demo.description}</div>
                       </div>
                       {selectedDemo?.id === demo.id && (
-                        <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
+                        <div className="ml-auto">
+                          <div className="w-3 h-3 rounded-full bg-primary" />
+                        </div>
                       )}
                     </button>
                   ))}
@@ -160,22 +162,22 @@ export function DemoSection() {
 
             {/* Right: Results Panel */}
             <motion.div 
-              className="paper-card p-6"
-              initial={{ opacity: 0, x: 16 }}
+              className="glass-card p-6"
+              initial={{ opacity: 0, x: 20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
             >
-              <div className="text-sm font-medium text-muted-foreground mb-4">Verification Results</div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-4">Verification Results</h3>
               
-              {/* Progress */}
+              {/* Status Bar */}
               <div className="mb-6">
                 <div className="flex items-center justify-between text-sm mb-2">
                   <span className="text-muted-foreground">{getStatusText()}</span>
-                  <span className="font-mono text-primary text-xs">{progress}%</span>
+                  <span className="font-mono text-primary">{progress}%</span>
                 </div>
-                <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                <div className="h-2 rounded-full bg-secondary overflow-hidden">
                   <motion.div 
-                    className="h-full bg-primary"
+                    className="h-full bg-gradient-to-r from-primary to-cyan-400"
                     initial={{ width: 0 }}
                     animate={{ width: `${progress}%` }}
                     transition={{ duration: 0.3 }}
@@ -188,69 +190,70 @@ export function DemoSection() {
                 {result ? (
                   <motion.div
                     key="result"
-                    initial={{ opacity: 0, scale: 0.98 }}
+                    initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.98 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
                     className="space-y-4"
                   >
-                    {/* Verdict */}
+                    {/* Verdict Card */}
                     <div className={cn(
-                      "p-5 rounded-md border text-center",
+                      "p-6 rounded-xl border text-center",
                       result.type === "genuine" 
-                        ? "bg-success/8 border-success/30" 
+                        ? "bg-success/10 border-success/30" 
                         : result.type === "forged" 
-                          ? "bg-destructive/8 border-destructive/30"
-                          : "bg-warning/8 border-warning/30"
+                          ? "bg-destructive/10 border-destructive/30"
+                          : "bg-warning/10 border-warning/30"
                     )}>
-                      <div className="mb-2">
+                      <div className={cn(
+                        "inline-flex p-3 rounded-full mb-3",
+                        result.type === "genuine" 
+                          ? "bg-success/20" 
+                          : result.type === "forged" 
+                            ? "bg-destructive/20"
+                            : "bg-warning/20"
+                      )}>
                         {result.type === "genuine" ? (
-                          <CheckCircle2 className="h-8 w-8 text-success mx-auto" />
+                          <CheckCircle2 className="h-8 w-8 text-success" />
                         ) : result.type === "forged" ? (
-                          <XCircle className="h-8 w-8 text-destructive mx-auto" />
+                          <XCircle className="h-8 w-8 text-destructive" />
                         ) : (
-                          <AlertTriangle className="h-8 w-8 text-warning mx-auto" />
+                          <AlertTriangle className="h-8 w-8 text-warning" />
                         )}
                       </div>
                       <div className={cn(
-                        "text-xl font-serif font-semibold uppercase",
-                        result.type === "genuine" ? "text-success" : result.type === "forged" ? "text-destructive" : "text-warning"
+                        "text-2xl font-bold uppercase mb-1",
+                        result.type === "genuine" 
+                          ? "text-success" 
+                          : result.type === "forged" 
+                            ? "text-destructive"
+                            : "text-warning"
                       )}>
-                        {result.type === "genuine" ? "Authentic" : result.type === "forged" ? "Forged" : "Tampered"}
+                        {result.type === "genuine" ? "✓ Authentic" : result.type === "forged" ? "✗ Forged" : "⚠ Tampered"}
                       </div>
-                      <div className="text-sm text-muted-foreground mt-1">
-                        {(result.confidence * 100).toFixed(1)}% confidence • {result.processingTime}ms
+                      <div className="text-sm text-muted-foreground">
+                        Confidence: {(result.confidence * 100).toFixed(1)}% • {result.processingTime}ms
                       </div>
                     </div>
 
-                    {/* Scores */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="p-4 rounded-md bg-secondary/40 border border-border">
-                        <div className="text-xs text-muted-foreground mb-1">Siamese Match</div>
-                        <div className="text-2xl font-serif font-semibold text-foreground">
-                          {(result.siameseScore * 100).toFixed(1)}%
-                        </div>
+                    {/* Score Breakdown */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-4 rounded-xl bg-secondary/30 border border-border">
+                        <div className="text-sm text-muted-foreground mb-2">Siamese Match</div>
+                        <div className="text-2xl font-bold text-gradient">{(result.siameseScore * 100).toFixed(1)}%</div>
                       </div>
-                      <div className="p-4 rounded-md bg-secondary/40 border border-border">
-                        <div className="text-xs text-muted-foreground mb-1">Tamper Score</div>
+                      <div className="p-4 rounded-xl bg-secondary/30 border border-border">
+                        <div className="text-sm text-muted-foreground mb-2">Tamper Score</div>
                         <div className={cn(
-                          "text-2xl font-serif font-semibold",
+                          "text-2xl font-bold",
                           result.tamperScore > 0.5 ? "text-destructive" : "text-success"
-                        )}>
-                          {(result.tamperScore * 100).toFixed(1)}%
-                        </div>
+                        )}>{(result.tamperScore * 100).toFixed(1)}%</div>
                       </div>
                     </div>
 
-                    {/* Dataset info */}
-                    <div className="p-3 rounded-md bg-primary/5 border border-primary/20">
-                      <div className="text-xs text-primary font-medium">Model trained on: {result.dataset.name}</div>
-                      <div className="text-xs text-muted-foreground mt-0.5">{result.dataset.description}</div>
-                    </div>
-
-                    {/* Details */}
-                    <div className="p-4 rounded-md bg-secondary/30 border border-border">
-                      <div className="text-sm font-medium text-foreground mb-3">Analysis Details</div>
-                      <div className="space-y-2">
+                    {/* Detailed Analysis */}
+                    <div className="p-4 rounded-xl bg-secondary/20 border border-border">
+                      <div className="text-sm font-medium text-foreground mb-3">Detailed Analysis</div>
+                      <div className="grid gap-2">
                         {[
                           { label: "Stroke Consistency", value: result.details.strokeConsistency },
                           { label: "Pressure Pattern", value: result.details.pressurePattern },
@@ -258,11 +261,11 @@ export function DemoSection() {
                           { label: "Pixel Anomalies", value: result.details.pixelAnomalies, inverse: true },
                         ].map((item) => (
                           <div key={item.label} className="flex items-center gap-3">
-                            <span className="text-xs text-muted-foreground w-28">{item.label}</span>
-                            <div className="flex-1 h-1 rounded-full bg-secondary overflow-hidden">
+                            <span className="text-xs text-muted-foreground w-32">{item.label}</span>
+                            <div className="flex-1 h-1.5 rounded-full bg-secondary overflow-hidden">
                               <div 
                                 className={cn(
-                                  "h-full transition-all",
+                                  "h-full transition-all duration-500",
                                   item.inverse
                                     ? item.value > 0.3 ? "bg-destructive" : "bg-success"
                                     : item.value > 0.7 ? "bg-success" : item.value > 0.4 ? "bg-warning" : "bg-destructive"
@@ -270,7 +273,7 @@ export function DemoSection() {
                                 style={{ width: `${item.value * 100}%` }}
                               />
                             </div>
-                            <span className="text-xs font-mono text-muted-foreground w-10 text-right">
+                            <span className="text-xs font-mono text-muted-foreground w-12 text-right">
                               {(item.value * 100).toFixed(0)}%
                             </span>
                           </div>
@@ -286,17 +289,18 @@ export function DemoSection() {
                     exit={{ opacity: 0 }}
                     className="h-64 flex flex-col items-center justify-center text-muted-foreground"
                   >
-                    <div className="w-12 h-12 rounded-md bg-secondary/50 flex items-center justify-center mb-3">
-                      <Play className="h-5 w-5" />
+                    <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
+                      <Play className="h-8 w-8" />
                     </div>
                     <p className="text-sm">Select a test case and run verification</p>
                   </motion.div>
                 )}
               </AnimatePresence>
 
-              {/* Actions */}
+              {/* Action Buttons */}
               <div className="flex gap-3 mt-6">
                 <Button
+                  variant="hero"
                   className="flex-1"
                   onClick={handleRunDemo}
                   disabled={!selectedDemo || (status !== "idle" && status !== "complete")}
@@ -307,6 +311,7 @@ export function DemoSection() {
                 {result && (
                   <Button variant="outline" onClick={handleReset}>
                     <RotateCcw className="h-4 w-4" />
+                    Reset
                   </Button>
                 )}
               </div>
