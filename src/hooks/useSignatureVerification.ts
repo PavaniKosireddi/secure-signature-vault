@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
+import { API_ENDPOINTS, isBackendConfigured, checkBackendHealth } from "@/config/api";
 
-export type VerificationStatus = "idle" | "uploading" | "preprocessing" | "tamper-check" | "siamese-analysis" | "complete";
+export type VerificationStatus = "idle" | "uploading" | "preprocessing" | "tamper-check" | "siamese-analysis" | "complete" | "error";
 export type ResultType = "genuine" | "forged" | "tampered" | null;
 
 export interface VerificationResult {
@@ -15,6 +16,7 @@ export interface VerificationResult {
     spatialAlignment: number;
     pixelAnomalies: number;
   };
+  isSimulated?: boolean;
 }
 
 export interface DemoSignature {
@@ -25,14 +27,122 @@ export interface DemoSignature {
   description: string;
 }
 
+// Convert image file/URL to base64
+const imageToBase64 = async (imageSource: string | File): Promise<string> => {
+  if (imageSource instanceof File) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(imageSource);
+    });
+  }
+  
+  // If it's already a data URL or base64
+  if (imageSource.startsWith('data:')) {
+    return imageSource;
+  }
+  
+  // If it's a URL (like SVG), fetch and convert
+  try {
+    const response = await fetch(imageSource);
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    throw new Error("Failed to convert image to base64");
+  }
+};
+
 export function useSignatureVerification() {
   const [status, setStatus] = useState<VerificationStatus>("idle");
   const [result, setResult] = useState<VerificationResult | null>(null);
   const [progress, setProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [backendAvailable, setBackendAvailable] = useState<boolean | null>(null);
 
+  // Check if backend is available
+  const checkBackend = useCallback(async (): Promise<boolean> => {
+    if (!isBackendConfigured()) {
+      setBackendAvailable(false);
+      return false;
+    }
+    
+    const isHealthy = await checkBackendHealth();
+    setBackendAvailable(isHealthy);
+    return isHealthy;
+  }, []);
+
+  // Real API verification
+  const verifyWithBackend = useCallback(async (
+    referenceImage: string | File,
+    testImage: string | File
+  ): Promise<VerificationResult> => {
+    const startTime = Date.now();
+    
+    setStatus("uploading");
+    setProgress(10);
+    
+    // Convert images to base64
+    const [refBase64, testBase64] = await Promise.all([
+      imageToBase64(referenceImage),
+      imageToBase64(testImage)
+    ]);
+    
+    setStatus("preprocessing");
+    setProgress(30);
+    
+    // Send to backend
+    const response = await fetch(API_ENDPOINTS.VERIFY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        reference: refBase64,
+        test: testBase64
+      })
+    });
+    
+    setStatus("tamper-check");
+    setProgress(50);
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(errorData.error || `Server error: ${response.status}`);
+    }
+    
+    setStatus("siamese-analysis");
+    setProgress(75);
+    
+    const data = await response.json();
+    
+    setProgress(100);
+    
+    const processingTime = Date.now() - startTime;
+    
+    const verificationResult: VerificationResult = {
+      type: data.result as ResultType,
+      siameseScore: data.siameseScore,
+      tamperScore: data.tamperScore,
+      confidence: data.confidence,
+      processingTime,
+      details: data.details,
+      isSimulated: false
+    };
+    
+    setStatus("complete");
+    setResult(verificationResult);
+    
+    return verificationResult;
+  }, []);
+
+  // Simulated verification (fallback when backend unavailable)
   const simulateProcessing = useCallback(async (
-    referenceImage: string, 
-    testImage: string,
+    referenceImage: string | File, 
+    testImage: string | File,
     demoType?: "genuine" | "forged" | "tampered"
   ): Promise<VerificationResult> => {
     const startTime = Date.now();
@@ -151,6 +261,7 @@ export function useSignatureVerification() {
         spatialAlignment: Math.min(details.spatialAlignment, 0.99),
         pixelAnomalies: Math.min(details.pixelAnomalies, 0.99),
       },
+      isSimulated: true
     };
 
     setStatus("complete");
@@ -159,17 +270,51 @@ export function useSignatureVerification() {
     return verificationResult;
   }, []);
 
+  // Main verify function - tries backend first, falls back to simulation
+  const verify = useCallback(async (
+    referenceImage: string | File,
+    testImage: string | File,
+    demoType?: "genuine" | "forged" | "tampered"
+  ): Promise<VerificationResult> => {
+    setError(null);
+    
+    try {
+      // Check backend availability
+      const isAvailable = await checkBackend();
+      
+      if (isAvailable && !demoType) {
+        // Use real backend for custom uploads
+        return await verifyWithBackend(referenceImage, testImage);
+      } else {
+        // Use simulation for demo mode or when backend unavailable
+        return await simulateProcessing(referenceImage, testImage, demoType);
+      }
+    } catch (err) {
+      setStatus("error");
+      const errorMessage = err instanceof Error ? err.message : "Verification failed";
+      setError(errorMessage);
+      
+      // Fallback to simulation on error
+      console.warn("Backend error, falling back to simulation:", errorMessage);
+      return await simulateProcessing(referenceImage, testImage, demoType);
+    }
+  }, [checkBackend, verifyWithBackend, simulateProcessing]);
+
   const reset = useCallback(() => {
     setStatus("idle");
     setResult(null);
     setProgress(0);
+    setError(null);
   }, []);
 
   return {
     status,
     result,
     progress,
-    verify: simulateProcessing,
+    error,
+    backendAvailable,
+    verify,
+    checkBackend,
     reset,
   };
 }
