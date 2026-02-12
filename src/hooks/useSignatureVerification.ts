@@ -123,15 +123,24 @@ export function useSignatureVerification() {
     
     const processingTime = Date.now() - startTime;
     
+    // Map backend response - handle both camelCase and snake_case
     const verificationResult: VerificationResult = {
-      type: data.result as ResultType,
-      siameseScore: data.siameseScore,
-      tamperScore: data.tamperScore,
-      confidence: data.confidence,
+      type: (data.result || data.verdict) as ResultType,
+      siameseScore: data.siameseScore ?? data.siamese_score ?? 0,
+      tamperScore: data.tamperScore ?? data.tamper_score ?? 0,
+      confidence: data.confidence ?? 0,
       processingTime,
-      details: data.details,
+      details: {
+        strokeConsistency: data.details?.strokeConsistency ?? data.details?.stroke_consistency ?? 0,
+        pressurePattern: data.details?.pressurePattern ?? data.details?.pressure_pattern ?? 0,
+        spatialAlignment: data.details?.spatialAlignment ?? data.details?.spatial_alignment ?? 0,
+        pixelAnomalies: data.details?.pixelAnomalies ?? data.details?.pixel_anomalies ?? 0,
+      },
       isSimulated: false
     };
+    
+    console.log("Backend response:", data);
+    console.log("Mapped result:", verificationResult);
     
     setStatus("complete");
     setResult(verificationResult);
