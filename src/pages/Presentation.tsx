@@ -382,7 +382,7 @@ const slides: Slide[] = [
         <table className="text-sm border-collapse border border-gray-300 w-full">
           <tbody>
             <tr className="border-b"><td className="py-2 px-3 font-semibold bg-blue-50">Development</td><td className="py-2 px-3">Google Colab (Flask:5000 + ngrok) + Vite (5173)</td></tr>
-            <tr><td className="py-2 px-3 font-semibold bg-blue-50">Production</td><td className="py-2 px-3">AWS/GCP (Flask) + Vercel/Lovable (React)</td></tr>
+            <tr><td className="py-2 px-3 font-semibold bg-blue-50">Production</td><td className="py-2 px-3">AWS/GCP (Flask) + Vercel (React)</td></tr>
           </tbody>
         </table>
       </div>
