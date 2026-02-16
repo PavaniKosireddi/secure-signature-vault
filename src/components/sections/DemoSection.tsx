@@ -3,7 +3,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Play, CheckCircle2, XCircle, AlertTriangle, RotateCcw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useSignatureVerification, type DemoSignature } from "@/hooks/useSignatureVerification";
+import { useSignatureVerification } from "@/hooks/useSignatureVerification";
+
+interface DemoSignature {
+  id: string;
+  name: string;
+  type: string;
+  image: string;
+  description: string;
+}
 
 import referenceGenuineSvg from "@/assets/signatures/reference-genuine.svg";
 import testGenuineSvg from "@/assets/signatures/test-genuine.svg";
@@ -43,8 +51,7 @@ export function DemoSection() {
     
     await verify(
       referenceGenuineSvg,
-      selectedDemo.image,
-      selectedDemo.type as "genuine" | "forged" | "tampered"
+      selectedDemo.image
     );
   };
 
