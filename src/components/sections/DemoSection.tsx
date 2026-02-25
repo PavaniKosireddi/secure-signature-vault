@@ -64,8 +64,7 @@ export function DemoSection() {
     switch (status) {
       case "uploading": return "Uploading signatures...";
       case "preprocessing": return "Preprocessing images...";
-      case "tamper-check": return "Running tamper detection CNN...";
-      case "siamese-analysis": return "Analyzing with Siamese network...";
+      case "forgery-check": return "Running forgery detection...";
       case "complete": return "Analysis complete";
       default: return "Ready";
     }
