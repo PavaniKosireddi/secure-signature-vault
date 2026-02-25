@@ -17,79 +17,146 @@ export interface VerificationResult {
   };
 }
 
-// ✅ HARDCODED NGROK URL - Replace with your actual URL if it changes
-const API_URL = " https://generalisable-leonardo-noncharitably.ngrok-free.dev";
+export interface DemoSignature {
+  id: string;
+  name: string;
+  type: "reference" | "genuine" | "forged" | "tampered";
+  image: string;
+  description: string;
+}
 
 export function useSignatureVerification() {
   const [status, setStatus] = useState<VerificationStatus>("idle");
   const [result, setResult] = useState<VerificationResult | null>(null);
   const [progress, setProgress] = useState(0);
 
-  const verify = useCallback(async (
-    referenceImage: string,
+  const simulateProcessing = useCallback(async (
+    referenceImage: string, 
     testImage: string,
+    demoType?: "genuine" | "forged" | "tampered"
   ): Promise<VerificationResult> => {
     const startTime = Date.now();
+    
+    // Simulate preprocessing
+    setStatus("uploading");
+    setProgress(10);
+    await new Promise(r => setTimeout(r, 500));
+    
+    setStatus("preprocessing");
+    setProgress(30);
+    await new Promise(r => setTimeout(r, 600));
+    
+    // Simulate tamper check
+    setStatus("tamper-check");
+    setProgress(50);
+    await new Promise(r => setTimeout(r, 700));
+    
+    // Simulate Siamese analysis
+    setStatus("siamese-analysis");
+    setProgress(75);
+    await new Promise(r => setTimeout(r, 800));
+    
+    setProgress(100);
+    
+    // Generate result based on demo type or random
+    let resultType: ResultType;
+    let siameseScore: number;
+    let tamperScore: number;
+    let details: VerificationResult["details"];
 
-    try {
-      setStatus("uploading");
-      setProgress(20);
-
-      console.log('🔄 API URL:', API_URL);
-      console.log('🔄 Sending request...');
-
-      const response = await fetch(`${API_URL}/verify`, {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true"
-        },
-        body: JSON.stringify({
-          reference: referenceImage,
-          test: testImage,
-        }),
-      });
-
-      console.log('📥 Response:', response.status);
-
-      setStatus("siamese-analysis");
-      setProgress(70);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Error:', errorText);
-        throw new Error(`Failed: ${response.status}`);
+    if (demoType) {
+      // Demo mode with predictable results
+      switch (demoType) {
+        case "genuine":
+          resultType = "genuine";
+          siameseScore = 0.94 + Math.random() * 0.05;
+          tamperScore = 0.02 + Math.random() * 0.03;
+          details = {
+            strokeConsistency: 0.96 + Math.random() * 0.03,
+            pressurePattern: 0.93 + Math.random() * 0.05,
+            spatialAlignment: 0.95 + Math.random() * 0.04,
+            pixelAnomalies: 0.01 + Math.random() * 0.02,
+          };
+          break;
+        case "forged":
+          resultType = "forged";
+          siameseScore = 0.35 + Math.random() * 0.2;
+          tamperScore = 0.05 + Math.random() * 0.08;
+          details = {
+            strokeConsistency: 0.45 + Math.random() * 0.15,
+            pressurePattern: 0.38 + Math.random() * 0.12,
+            spatialAlignment: 0.52 + Math.random() * 0.18,
+            pixelAnomalies: 0.08 + Math.random() * 0.07,
+          };
+          break;
+        case "tampered":
+          resultType = "tampered";
+          siameseScore = 0.65 + Math.random() * 0.15;
+          tamperScore = 0.78 + Math.random() * 0.18;
+          details = {
+            strokeConsistency: 0.72 + Math.random() * 0.12,
+            pressurePattern: 0.68 + Math.random() * 0.15,
+            spatialAlignment: 0.75 + Math.random() * 0.1,
+            pixelAnomalies: 0.82 + Math.random() * 0.15,
+          };
+          break;
       }
-
-      const data = await response.json();
-      console.log('✅ Data:', data);
-      
-      setProgress(100);
-
-      const verificationResult: VerificationResult = {
-        type: data.result as ResultType,
-        siameseScore: data.siameseScore ?? 0,
-        tamperScore: data.tamperScore ?? 0,
-        confidence: data.confidence ?? 0,
-        processingTime: data.processingTime ?? (Date.now() - startTime),
-        details: {
-          strokeConsistency: data.details?.strokeConsistency ?? 0,
-          pressurePattern: data.details?.pressurePattern ?? 0,
-          spatialAlignment: data.details?.spatialAlignment ?? 0,
-          pixelAnomalies: data.details?.pixelAnomalies ?? 0,
-        },
-      };
-
-      setStatus("complete");
-      setResult(verificationResult);
-      return verificationResult;
-      
-    } catch (error) {
-      console.error('❌ Verification error:', error);
-      setStatus("idle");
-      setProgress(0);
-      throw error;
+    } else {
+      // Random result for custom uploads
+      const random = Math.random();
+      if (random > 0.6) {
+        resultType = "genuine";
+        siameseScore = 0.92 + Math.random() * 0.07;
+        tamperScore = 0.02 + Math.random() * 0.05;
+        details = {
+          strokeConsistency: 0.9 + Math.random() * 0.08,
+          pressurePattern: 0.88 + Math.random() * 0.1,
+          spatialAlignment: 0.92 + Math.random() * 0.06,
+          pixelAnomalies: 0.02 + Math.random() * 0.03,
+        };
+      } else if (random > 0.3) {
+        resultType = "forged";
+        siameseScore = 0.35 + Math.random() * 0.25;
+        tamperScore = 0.05 + Math.random() * 0.1;
+        details = {
+          strokeConsistency: 0.4 + Math.random() * 0.2,
+          pressurePattern: 0.35 + Math.random() * 0.15,
+          spatialAlignment: 0.5 + Math.random() * 0.2,
+          pixelAnomalies: 0.1 + Math.random() * 0.1,
+        };
+      } else {
+        resultType = "tampered";
+        siameseScore = 0.6 + Math.random() * 0.2;
+        tamperScore = 0.75 + Math.random() * 0.2;
+        details = {
+          strokeConsistency: 0.7 + Math.random() * 0.15,
+          pressurePattern: 0.65 + Math.random() * 0.15,
+          spatialAlignment: 0.72 + Math.random() * 0.12,
+          pixelAnomalies: 0.8 + Math.random() * 0.15,
+        };
+      }
     }
+
+    const processingTime = Date.now() - startTime;
+    
+    const verificationResult: VerificationResult = {
+      type: resultType,
+      siameseScore: Math.min(siameseScore, 0.99),
+      tamperScore: Math.min(tamperScore, 0.99),
+      confidence: resultType === "genuine" ? siameseScore : (1 - siameseScore),
+      processingTime,
+      details: {
+        strokeConsistency: Math.min(details.strokeConsistency, 0.99),
+        pressurePattern: Math.min(details.pressurePattern, 0.99),
+        spatialAlignment: Math.min(details.spatialAlignment, 0.99),
+        pixelAnomalies: Math.min(details.pixelAnomalies, 0.99),
+      },
+    };
+
+    setStatus("complete");
+    setResult(verificationResult);
+    
+    return verificationResult;
   }, []);
 
   const reset = useCallback(() => {
@@ -98,5 +165,11 @@ export function useSignatureVerification() {
     setProgress(0);
   }, []);
 
-  return { status, result, progress, verify, reset };
+  return {
+    status,
+    result,
+    progress,
+    verify: simulateProcessing,
+    reset,
+  };
 }
