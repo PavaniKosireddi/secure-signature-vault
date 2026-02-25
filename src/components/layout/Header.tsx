@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Shield, Menu, X } from "lucide-react";
+import { Shield, Menu, X, LogIn, LayoutDashboard, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { Link, useNavigate } from "react-router-dom";
 
 const navLinks = [
   { label: "Home", href: "#home" },
@@ -15,6 +17,8 @@ const navLinks = [
 
 export function Header() {
   const [isOpen, setIsOpen] = useState(false);
+  const { user, logout, isAdmin } = useAuth();
+  const navigate = useNavigate();
 
   const handleNavClick = (href: string) => {
     setIsOpen(false);
@@ -23,7 +27,7 @@ export function Header() {
   };
 
   return (
-    <motion.header 
+    <motion.header
       className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl"
       initial={{ y: -100 }}
       animate={{ y: 0 }}
@@ -56,11 +60,32 @@ export function Header() {
             ))}
           </div>
 
-          {/* CTA Button */}
-          <div className="hidden md:block">
-            <Button variant="hero" size="sm" onClick={() => handleNavClick("#verify")}>
-              Get Started
-            </Button>
+          {/* Auth Buttons */}
+          <div className="hidden md:flex items-center gap-2">
+            {user ? (
+              <>
+                {isAdmin && (
+                  <Button variant="glow" size="sm" onClick={() => navigate("/admin")}>
+                    <LayoutDashboard className="h-4 w-4" />
+                    Admin
+                  </Button>
+                )}
+                <span className="text-sm text-muted-foreground">{user.username}</span>
+                <Button variant="ghost" size="sm" onClick={() => { logout(); }}>
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="ghost" size="sm" onClick={() => navigate("/login")}>
+                  <LogIn className="h-4 w-4" />
+                  Sign In
+                </Button>
+                <Button variant="hero" size="sm" onClick={() => handleNavClick("#verify")}>
+                  Get Started
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -89,9 +114,25 @@ export function Header() {
                 {link.label}
               </button>
             ))}
-            <Button variant="hero" size="sm" className="mt-2" onClick={() => handleNavClick("#verify")}>
-              Get Started
-            </Button>
+            {user ? (
+              <>
+                {isAdmin && (
+                  <Button variant="glow" size="sm" onClick={() => { setIsOpen(false); navigate("/admin"); }}>
+                    <LayoutDashboard className="h-4 w-4" />
+                    Admin Dashboard
+                  </Button>
+                )}
+                <Button variant="ghost" size="sm" onClick={() => { logout(); setIsOpen(false); }}>
+                  <LogOut className="h-4 w-4" />
+                  Sign Out
+                </Button>
+              </>
+            ) : (
+              <Button variant="hero" size="sm" className="mt-2" onClick={() => { setIsOpen(false); navigate("/login"); }}>
+                <LogIn className="h-4 w-4" />
+                Sign In
+              </Button>
+            )}
           </div>
         </motion.div>
       </div>

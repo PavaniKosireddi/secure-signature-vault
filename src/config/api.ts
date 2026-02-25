@@ -8,25 +8,29 @@
  * VITE_API_URL=https://xxxx-xx-xx-xxx-xxx.ngrok.io
  */
 
-// Default to localhost for development, can be overridden with env variable
 export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export const API_ENDPOINTS = {
   HEALTH: `${API_BASE_URL}/health`,
   VERIFY: `${API_BASE_URL}/verify`,
+  PERSONS: `${API_BASE_URL}/persons`,
+  AUTH_LOGIN: `${API_BASE_URL}/auth/login`,
+  AUTH_SIGNUP: `${API_BASE_URL}/auth/signup`,
+  AUTH_PROFILE: `${API_BASE_URL}/auth/profile`,
+  ADMIN_LOGS: `${API_BASE_URL}/admin/logs`,
+  ADMIN_SIGNATURES: `${API_BASE_URL}/admin/signatures`,
+  ADMIN_SIGNATURES_ADD: `${API_BASE_URL}/admin/signatures/add`,
 };
 
-// Check if backend is configured
 export const isBackendConfigured = (): boolean => {
   return !!import.meta.env.VITE_API_URL;
 };
 
-// Check backend health
 export const checkBackendHealth = async (): Promise<boolean> => {
   try {
     const response = await fetch(API_ENDPOINTS.HEALTH, {
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
     });
     return response.ok;
   } catch {
