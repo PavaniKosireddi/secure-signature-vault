@@ -74,19 +74,20 @@ export function useSignatureVerification() {
         if (res.ok) {
           const data = await res.json();
           setProgress(100);
-          const processingTime = Date.now() - startTime;
+          const processingTime = data.processing_time_ms || (Date.now() - startTime);
 
+          const details = data.details || {};
           const verificationResult: VerificationResult = {
-            type: (data.result || data.verdict || "forged").toLowerCase() as ResultType,
-            siameseScore: data.similarity_score ?? data.siameseScore ?? 0,
-            tamperScore: data.tamper_score ?? data.tamperScore ?? 0,
+            type: (data.result || "forged").toLowerCase() as ResultType,
+            siameseScore: data.similarity_score ?? 0,
+            tamperScore: data.tamper_score ?? 0,
             confidence: data.confidence ?? 0,
             processingTime,
             details: {
-              strokeConsistency: data.stroke_consistency ?? data.details?.strokeConsistency ?? 0,
-              pressurePattern: data.pressure_pattern ?? data.details?.pressurePattern ?? 0,
-              spatialAlignment: data.spatial_alignment ?? data.details?.spatialAlignment ?? 0,
-              pixelAnomalies: data.pixel_anomalies ?? data.details?.pixelAnomalies ?? 0,
+              strokeConsistency: details.stroke_consistency ?? 0,
+              pressurePattern: details.pressure_pattern ?? 0,
+              spatialAlignment: details.spatial_alignment ?? 0,
+              pixelAnomalies: details.pixel_anomalies ?? details.tamper_probability ?? 0,
             },
           };
 
