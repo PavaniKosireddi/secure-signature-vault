@@ -1,14 +1,15 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload, FileSignature, Shield, AlertTriangle, CheckCircle2, XCircle, Loader2, RotateCcw, Info, User } from "lucide-react";
+import { Upload, FileSignature, Shield, AlertTriangle, CheckCircle2, XCircle, Loader2, RotateCcw, Info, User, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useSignatureVerification, type VerificationResult } from "@/hooks/useSignatureVerification";
-import { API_BASE_URL, isBackendConfigured } from "@/config/api";
+import { API_BASE_URL, isBackendConfigured, checkBackendHealth } from "@/config/api";
 
 interface PersonOption {
   id: number;
   person_name: string;
+  image_count: number;
 }
 
 export function VerificationSection() {
@@ -17,22 +18,41 @@ export function VerificationSection() {
   const [selectedPerson, setSelectedPerson] = useState("");
   const [persons, setPersons] = useState<PersonOption[]>([]);
   const [loadingPersons, setLoadingPersons] = useState(false);
+  const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
+  const [checkingHealth, setCheckingHealth] = useState(false);
 
   const { status, result, progress, verify, reset } = useSignatureVerification();
 
-  // Fetch available persons from DB
-  useEffect(() => {
-    if (isBackendConfigured()) {
+  // Check backend health & fetch persons
+  const checkAndFetch = useCallback(async () => {
+    if (!isBackendConfigured()) {
+      setBackendOnline(false);
+      return;
+    }
+
+    setCheckingHealth(true);
+    const healthy = await checkBackendHealth();
+    setBackendOnline(healthy);
+    setCheckingHealth(false);
+
+    if (healthy) {
       setLoadingPersons(true);
-      fetch(`${API_BASE_URL}/persons`, {
-        headers: { "ngrok-skip-browser-warning": "true" },
-      })
-        .then((r) => r.ok ? r.json() : { persons: [] })
-        .then((data) => setPersons(data.persons || []))
-        .catch(() => {})
-        .finally(() => setLoadingPersons(false));
+      try {
+        const res = await fetch(`${API_BASE_URL}/persons`, {
+          headers: { "ngrok-skip-browser-warning": "true" },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setPersons(data.persons || []);
+        }
+      } catch { /* ignore */ }
+      setLoadingPersons(false);
     }
   }, []);
+
+  useEffect(() => {
+    checkAndFetch();
+  }, [checkAndFetch]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -71,7 +91,7 @@ export function VerificationSection() {
     switch (status) {
       case "uploading": return "Uploading signature...";
       case "preprocessing": return "Preprocessing image...";
-      case "forgery-check": return "Running forgery detection...";
+      case "forgery-check": return "Running AI verification pipeline...";
       case "complete": return "Analysis complete";
       default: return "Ready";
     }
@@ -124,33 +144,62 @@ export function VerificationSection() {
           transition={{ delay: 0.3 }}
         >
           <div className="glass-card p-6 md:p-8">
+            {/* Backend Status Banner */}
+            {backendOnline === false && (
+              <div className="mb-6 p-4 rounded-xl bg-destructive/10 border border-destructive/30 flex items-start gap-3">
+                <WifiOff className="h-5 w-5 text-destructive mt-0.5 shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-destructive">Backend Offline</p>
+                  <p className="text-xs text-destructive/80 mt-1">
+                    {!isBackendConfigured()
+                      ? "Set VITE_API_URL in .env.local to connect to your Colab backend."
+                      : "The Colab backend is not running. Please start the Colab notebook and run all cells, then click Retry."}
+                  </p>
+                  {isBackendConfigured() && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-2 text-destructive border-destructive/30 hover:bg-destructive/10"
+                      onClick={checkAndFetch}
+                      disabled={checkingHealth}
+                    >
+                      {checkingHealth ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}
+                      Retry Connection
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {backendOnline === true && (
+              <div className="mb-6 p-3 rounded-xl bg-success/10 border border-success/30 flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
+                <span className="text-xs text-success font-medium">Backend Connected</span>
+                <span className="text-xs text-muted-foreground">• {persons.length} person(s) in database</span>
+              </div>
+            )}
+
             {/* Person Selection */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-foreground mb-3 flex items-center gap-2">
                 <User className="h-4 w-4 text-primary" />
                 Select Person (Reference from Database)
               </label>
-              {isBackendConfigured() ? (
-                <select
-                  value={selectedPerson}
-                  onChange={(e) => setSelectedPerson(e.target.value)}
-                  disabled={isProcessing}
-                  className="w-full h-10 px-3 rounded-lg bg-input border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  <option value="">
-                    {loadingPersons ? "Loading persons..." : "-- Select a person --"}
+              <select
+                value={selectedPerson}
+                onChange={(e) => setSelectedPerson(e.target.value)}
+                disabled={isProcessing || !backendOnline}
+                className="w-full h-10 px-3 rounded-lg bg-input border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+              >
+                <option value="">
+                  {checkingHealth ? "Connecting..." : loadingPersons ? "Loading persons..." : persons.length === 0 ? "No persons in database — add via Admin" : "-- Select a person --"}
+                </option>
+                {persons.map((p) => (
+                  <option key={p.id} value={p.person_name}>
+                    {p.person_name} ({p.image_count} ref{p.image_count !== 1 ? 's' : ''})
                   </option>
-                  {persons.map((p) => (
-                    <option key={p.id} value={p.person_name}>
-                      {p.person_name}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <div className="p-3 rounded-lg bg-warning/10 border border-warning/30 text-warning text-sm">
-                  Backend not configured. Set VITE_API_URL in .env.local to connect.
-                </div>
-              )}
+                ))}
+              </select>
             </div>
 
             {/* Test Signature Upload */}
@@ -222,7 +271,7 @@ export function VerificationSection() {
                 variant="hero"
                 size="lg"
                 onClick={handleVerification}
-                disabled={!testImage || !selectedPerson || isProcessing}
+                disabled={!testImage || !selectedPerson || isProcessing || !backendOnline}
                 className="min-w-[200px]"
               >
                 {isProcessing ? (
@@ -263,7 +312,7 @@ export function VerificationSection() {
                         <div className="p-2 rounded-lg bg-primary/10">
                           <Shield className="h-5 w-5 text-primary" />
                         </div>
-                        <span className="font-medium">Siamese Match</span>
+                        <span className="font-medium">Similarity</span>
                       </div>
                       <div className="text-3xl font-bold text-gradient mb-2">
                         {(result.siameseScore * 100).toFixed(1)}%
