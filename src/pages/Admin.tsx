@@ -9,40 +9,50 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 interface VerificationLog {
-  id: number;
-  user_id: number;
-  username: string;
+  id: string;
   person_name: string;
+  personName: string;
   result: string;
+  status: string;
   confidence: number;
-  similarity_score: number;
-  tamper_score: number;
+  siameseScore: number;
+  tamperScore: number;
   timestamp: string;
 }
 
 interface StoredSignature {
   id: number;
-  person_name: string;
-  image_count: number;
-  created_at: string;
+  name: string;
+  personName: string;
+  registeredAt: string;
 }
 
 type Tab = "results" | "signatures";
+
+// Convert a File to a base64 data-URL string
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 const Admin = () => {
   const { user, token, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<Tab>("results");
-  const [logs, setLogs] = useState<VerificationLog[]>([]);
+  const [logs, setLogs]           = useState<VerificationLog[]>([]);
   const [signatures, setSignatures] = useState<StoredSignature[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading]     = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   // Add signature form
-  const [personName, setPersonName] = useState("");
+  const [personName, setPersonName]       = useState("");
   const [signatureFiles, setSignatureFiles] = useState<File[]>([]);
-  const [uploading, setUploading] = useState(false);
+  const [uploading, setUploading]         = useState(false);
 
   const headers = {
     Authorization: `Bearer ${token}`,
@@ -66,11 +76,19 @@ const Admin = () => {
     setLoading(true);
     try {
       const [logsRes, sigsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/admin/logs`, { headers }),
+        fetch(`${API_BASE_URL}/admin/logs`,       { headers }),
         fetch(`${API_BASE_URL}/admin/signatures`, { headers }),
       ]);
-      if (logsRes.ok) setLogs(await logsRes.json().then(d => d.logs || []));
-      if (sigsRes.ok) setSignatures(await sigsRes.json().then(d => d.signatures || []));
+
+      if (logsRes.ok) {
+        const d = await logsRes.json();
+        // backend returns { logs: [...] } or { history: [...] }
+        setLogs(d.logs ?? d.history ?? []);
+      }
+      if (sigsRes.ok) {
+        const d = await sigsRes.json();
+        setSignatures(d.signatures ?? []);
+      }
     } catch {
       toast({ title: "Error", description: "Could not fetch data. Is the backend running?", variant: "destructive" });
     } finally {
@@ -84,17 +102,26 @@ const Admin = () => {
 
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append("person_name", personName.trim());
-      signatureFiles.forEach((file) => formData.append("signatures", file));
-
-      const res = await fetch(`${API_BASE_URL}/admin/signatures/add`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "ngrok-skip-browser-warning": "true" },
-        body: formData,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Upload failed");
+      // Convert each file to base64 and upload one by one
+      for (const file of signatureFiles) {
+        const b64 = await fileToBase64(file);
+        const res = await fetch(`${API_BASE_URL}/admin/signatures/add`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+            "ngrok-skip-browser-warning": "true",
+          },
+          body: JSON.stringify({
+            name:           personName.trim(),
+            personName:     personName.trim(),
+            signature:      b64,
+            signatureImage: b64,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || data.error || "Upload failed");
+      }
 
       toast({ title: "Success", description: `Added ${signatureFiles.length} signature(s) for ${personName}` });
       setPersonName("");
@@ -107,27 +134,32 @@ const Admin = () => {
     }
   };
 
-  const handleDeleteSignature = async (id: number, name: string) => {
-    if (!confirm(`Delete all signatures for "${name}"?`)) return;
+  const handleDeleteSignature = async (sig: StoredSignature) => {
+    const displayName = sig.personName ?? sig.name;
+    if (!confirm(`Delete all signatures for "${displayName}"?`)) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/signatures/${id}`, {
+      // Delete by name (backend route: DELETE /admin/signatures/<name>)
+      const res = await fetch(`${API_BASE_URL}/admin/signatures/${encodeURIComponent(displayName)}`, {
         method: "DELETE",
         headers,
       });
       if (res.ok) {
-        toast({ title: "Deleted", description: `Removed signatures for ${name}` });
+        toast({ title: "Deleted", description: `Removed signatures for ${displayName}` });
         fetchData();
+      } else {
+        throw new Error("Delete failed");
       }
     } catch {
       toast({ title: "Error", description: "Delete failed", variant: "destructive" });
     }
   };
 
-  const filteredLogs = logs.filter((log) =>
-    log.person_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    log.result?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    log.username?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredLogs = logs.filter((log) => {
+    const name   = (log.person_name ?? log.personName ?? "").toLowerCase();
+    const result = (log.result ?? log.status ?? "").toLowerCase();
+    const q      = searchQuery.toLowerCase();
+    return name.includes(q) || result.includes(q);
+  });
 
   if (!user || !isAdmin) return null;
 
@@ -162,8 +194,8 @@ const Admin = () => {
         {/* Tabs */}
         <div className="flex gap-2 mb-8">
           {[
-            { id: "results" as Tab, label: "Verification History", icon: History },
-            { id: "signatures" as Tab, label: "Manage Signatures", icon: Users },
+            { id: "results"    as Tab, label: "Verification History", icon: History },
+            { id: "signatures" as Tab, label: "Manage Signatures",    icon: Users   },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -194,7 +226,7 @@ const Admin = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by name, result, user..."
+                placeholder="Search by name or result..."
                 className="w-full h-10 pl-10 pr-4 rounded-lg bg-input border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
@@ -206,10 +238,10 @@ const Admin = () => {
                   <thead>
                     <tr className="border-b border-border">
                       <th className="text-left p-4 text-muted-foreground font-medium">Person</th>
-                      <th className="text-left p-4 text-muted-foreground font-medium">User</th>
                       <th className="text-left p-4 text-muted-foreground font-medium">Result</th>
                       <th className="text-left p-4 text-muted-foreground font-medium">Confidence</th>
                       <th className="text-left p-4 text-muted-foreground font-medium">Similarity</th>
+                      <th className="text-left p-4 text-muted-foreground font-medium">Tamper Score</th>
                       <th className="text-left p-4 text-muted-foreground font-medium">Date</th>
                     </tr>
                   </thead>
@@ -221,25 +253,31 @@ const Admin = () => {
                         </td>
                       </tr>
                     ) : (
-                      filteredLogs.map((log) => (
-                        <tr key={log.id} className="border-b border-border/50 hover:bg-secondary/30">
-                          <td className="p-4 font-medium text-foreground">{log.person_name}</td>
-                          <td className="p-4 text-muted-foreground">{log.username}</td>
-                          <td className="p-4">
-                            <span className={cn(
-                              "px-2 py-1 rounded-md text-xs font-medium uppercase",
-                              log.result === "genuine" ? "bg-success/10 text-success" :
-                              log.result === "forged" ? "bg-destructive/10 text-destructive" :
-                              "bg-warning/10 text-warning"
-                            )}>
-                              {log.result}
-                            </span>
-                          </td>
-                          <td className="p-4 font-mono text-foreground">{(log.confidence * 100).toFixed(1)}%</td>
-                          <td className="p-4 font-mono text-muted-foreground">{(log.similarity_score * 100).toFixed(1)}%</td>
-                          <td className="p-4 text-muted-foreground">{new Date(log.timestamp).toLocaleDateString()}</td>
-                        </tr>
-                      ))
+                      filteredLogs.map((log, idx) => {
+                        const resultLabel = log.result ?? log.status ?? "unknown";
+                        const personLabel = log.person_name ?? log.personName ?? "—";
+                        return (
+                          <tr key={log.id ?? idx} className="border-b border-border/50 hover:bg-secondary/30">
+                            <td className="p-4 font-medium text-foreground capitalize">{personLabel}</td>
+                            <td className="p-4">
+                              <span className={cn(
+                                "px-2 py-1 rounded-md text-xs font-medium uppercase",
+                                resultLabel === "authentic" || resultLabel === "genuine"
+                                  ? "bg-green-500/10 text-green-400"
+                                  : resultLabel === "forged"
+                                  ? "bg-red-500/10 text-red-400"
+                                  : "bg-amber-500/10 text-amber-400"
+                              )}>
+                                {resultLabel}
+                              </span>
+                            </td>
+                            <td className="p-4 font-mono text-foreground">{((log.confidence ?? 0) * 100).toFixed(1)}%</td>
+                            <td className="p-4 font-mono text-muted-foreground">{((log.siameseScore ?? 0) * 100).toFixed(1)}%</td>
+                            <td className="p-4 font-mono text-muted-foreground">{((log.tamperScore ?? 0) * 100).toFixed(1)}%</td>
+                            <td className="p-4 text-muted-foreground">{log.timestamp ? new Date(log.timestamp).toLocaleDateString() : "—"}</td>
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
@@ -293,20 +331,24 @@ const Admin = () => {
                 <p className="text-muted-foreground text-sm">No reference signatures stored yet.</p>
               ) : (
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {signatures.map((sig) => (
-                    <div key={sig.id} className="p-4 rounded-xl bg-secondary/30 border border-border flex items-center justify-between">
-                      <div>
-                        <div className="font-medium text-foreground">{sig.person_name}</div>
-                        <div className="text-xs text-muted-foreground">{sig.image_count} sample(s) • {new Date(sig.created_at).toLocaleDateString()}</div>
+                  {signatures.map((sig, idx) => {
+                    const displayName = sig.personName ?? sig.name;
+                    const dateStr     = sig.registeredAt ? new Date(sig.registeredAt).toLocaleDateString() : "—";
+                    return (
+                      <div key={sig.id ?? idx} className="p-4 rounded-xl bg-secondary/30 border border-border flex items-center justify-between">
+                        <div>
+                          <div className="font-medium text-foreground capitalize">{displayName}</div>
+                          <div className="text-xs text-muted-foreground">Registered: {dateStr}</div>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteSignature(sig)}
+                          className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </div>
-                      <button
-                        onClick={() => handleDeleteSignature(sig.id, sig.person_name)}
-                        className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

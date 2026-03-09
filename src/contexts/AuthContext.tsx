@@ -20,9 +20,20 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+// Helper: normalise backend user object → frontend User shape
+// Backend returns `name`, frontend expects `username`
+function normaliseUser(raw: any): User {
+  return {
+    id:       raw.id,
+    username: raw.username ?? raw.name ?? raw.email?.split("@")[0] ?? "User",
+    email:    raw.email,
+    role:     raw.role ?? "user",
+  };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem("sigauth_token"));
+  const [user, setUser]           = useState<User | null>(null);
+  const [token, setToken]         = useState<string | null>(() => localStorage.getItem("sigauth_token"));
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -43,13 +54,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       if (res.ok) {
         const data = await res.json();
-        setUser(data.user);
+        setUser(normaliseUser(data.user));
       } else {
         localStorage.removeItem("sigauth_token");
         setToken(null);
       }
     } catch {
-      // Backend might be offline
+      // Backend might be offline — keep existing state
     } finally {
       setIsLoading(false);
     }
@@ -65,8 +76,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ email, password }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Login failed");
-    setUser(data.user);
+    if (!res.ok) throw new Error(data.message || data.error || "Login failed");
+    setUser(normaliseUser(data.user));
     setToken(data.token);
     localStorage.setItem("sigauth_token", data.token);
   };
@@ -78,11 +89,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         "Content-Type": "application/json",
         "ngrok-skip-browser-warning": "true",
       },
-      body: JSON.stringify({ username, email, password }),
+      // send both `name` and `username` so either backend field name works
+      body: JSON.stringify({ name: username, username, email, password }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Signup failed");
-    setUser(data.user);
+    if (!res.ok) throw new Error(data.message || data.error || "Signup failed");
+    setUser(normaliseUser(data.user));
     setToken(data.token);
     localStorage.setItem("sigauth_token", data.token);
   };
