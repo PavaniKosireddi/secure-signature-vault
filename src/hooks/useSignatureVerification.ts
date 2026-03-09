@@ -128,9 +128,9 @@ export function useSignatureVerification() {
       type: resultType,
       siameseScore: Math.min(siameseScore, 0.99),
       tamperScore:  Math.min(tamperScore,  0.99),
-      confidence:   resultType === "genuine" || resultType === "authentic" || resultType === "clean"
+      confidence:   (resultType as string) === "genuine" || (resultType as string) === "authentic" || (resultType as string) === "clean"
                       ? siameseScore
-                      : resultType === "tampered" ? tamperScore : (1 - siameseScore),
+                      : (resultType as string) === "tampered" ? tamperScore : (1 - siameseScore),
       processingTime,
       details: {
         strokeConsistency: Math.min(details.strokeConsistency, 0.99),
